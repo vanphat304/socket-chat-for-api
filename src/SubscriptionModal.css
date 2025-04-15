@@ -1,0 +1,120 @@
+.subscription-modal {
+  max-width: 1000px;
+  width: 90%;
+}
+
+.tier-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tier-tab {
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #666;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.tier-tab:hover {
+  color: #333;
+}
+
+.tier-tab.active {
+  color: #2196f3;
+  font-weight: bold;
+}
+
+.tier-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -16px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #2196f3;
+}
+
+.plans-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  height: 80vh;
+  overflow-y: auto;
+}
+
+.plan-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.plan-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.plan-card h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.price {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #2196f3;
+  margin: 0;
+}
+
+.description {
+  color: #666;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.features {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.features p {
+  margin: 0;
+  color: #444;
+  font-size: 0.9rem;
+}
+
+.subscribe-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.subscribe-button:hover {
+  background-color: #388e3c;
+}
+
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+} 
