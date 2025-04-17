@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
 import './Login.css';
-
+import { API_URL } from './config';
 const Login: React.FC = () => {
   const [email, setEmail] = useState('user@example.com');
   const [password, setPassword] = useState('SecurePassword123!');
@@ -13,7 +13,7 @@ const Login: React.FC = () => {
     setError('');
     try {
       console.log('Attempting login...');
-      const response = await fetch('http://localhost:4000/v1/auth/login', {
+      const response = await fetch(API_URL+'/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

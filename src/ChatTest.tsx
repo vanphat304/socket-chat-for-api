@@ -218,7 +218,7 @@ const ChatTest: React.FC = () => {
     formData.append("file", file);
     setUploading(true);
     try {
-      const response = await fetch("http://localhost:4000/v1/s3/upload", {
+      const response = await fetch(API_URL+"/s3/upload", {
         method: "POST",
         body: formData,
         headers: {

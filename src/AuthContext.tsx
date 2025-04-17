@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from './chat';
-
+import { API_URL } from './config';
 
 interface AuthContextType {
   user: User | null;
@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch('http://localhost:4000/v1/profile/me', {
+      const response = await fetch(API_URL+'/profile/me', {
         headers: {
           Authorization: `Bearer ${token}`
         }

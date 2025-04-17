@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
-
+import { API_URL } from './config';
 interface SubscriptionPlan {
   id: number;
   name: string;
@@ -34,7 +34,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const response = await fetch('http://localhost:4000/v1/subscription/plans', {
+        const response = await fetch(API_URL+'/subscription/plans', {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -59,7 +59,7 @@ const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }
 
   const handleSubscribe = async (planId: number) => {
     try {
-      const response = await fetch(`http://localhost:4000/v1/subscription/subscribe/${planId}`, {
+      const response = await fetch(API_URL+'/subscription/subscribe/'+planId, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`
