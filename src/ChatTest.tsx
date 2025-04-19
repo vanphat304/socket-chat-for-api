@@ -57,9 +57,6 @@ const ChatTest: React.FC = () => {
     console.log("Initializing socket connection...");
     if (!token || !user) return;
 
-    console.log("Token:", token);
-    console.log("User:", user);
-
     const newSocket = io(API_URL_SOCKET, {
       extraHeaders: {
         Authorization: `Bearer ${token}`,
@@ -68,8 +65,6 @@ const ChatTest: React.FC = () => {
         conversationId: selectedConversation?.id,
       },
     } as any);
-
-    console.log("New socket:", newSocket);
 
     newSocket.on("connect", () => {
       console.log("Socket connected");
@@ -90,10 +85,33 @@ const ChatTest: React.FC = () => {
       }
     });
 
-    newSocket.on("newMessageNotification", (notification) => {
+    newSocket.on(ChatSocketEvent.USER_JOINED_CONVERSATION, (data) => {
+      console.log("User joined conversation:", data);
+      if (selectedConversation?.id === data.conversationId) {
+        const fetchMessages = async () => {
+          try {
+            const response = await fetch(
+              `${API_URL}/chat/conversations/${data.conversationId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+            const responseData = await response.json();
+            setMessages(responseData.messages || []);
+          } catch (error) {
+            console.error("Error fetching messages:", error);
+          }
+        };
+        fetchMessages();
+      }
+    });
+
+
+    newSocket.on(ChatSocketEvent.NEW_MESSAGE_NOTIFICATION, (notification) => {
       console.log("New notification:", notification);
       setNotifications((prev) => [...prev, notification]);
-      // Update conversation unread count
       setConversations((prev) =>
         prev.map((conv) =>
           conv.id === notification.conversationId
@@ -107,15 +125,6 @@ const ChatTest: React.FC = () => {
       );
     });
 
-    // newSocket.on('messageRead', (data) => {
-    //   console.log('Message read:', data);
-    //   if (selectedConversation?.id === data.conversationId) {
-    //     setMessages(prev => prev.map(msg =>
-    //       msg.id === data.messageId ? { ...msg, isRead: true } : msg
-    //     ));
-    //   }
-    // });
-
     setSocket(newSocket);
 
     return () => {
@@ -125,23 +134,21 @@ const ChatTest: React.FC = () => {
 
   // Fetch conversations
 
-  const markAsRead = async (conversationId: number) => {
-    setConversations((prev) =>
-      prev.map((conv) =>
-        conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
-      )
-    );
-
+  const markMessagesAsRead = async (conversationId: number) => {
     try {
-      await fetch(`${API_URL}/chat/conversations/${conversationId}/read`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        method: "POST",
-      });
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
+        )
+      );
     } catch (error) {
-      console.error("Error marking conversation as read:", error);
+      console.error("Error marking messages as read:", error);
     }
+  };
+
+  const handleConversationClick = (conversation: Conversation) => {
+    setSelectedConversation(conversation);
+    markMessagesAsRead(conversation.id);
   };
 
   useEffect(() => {
@@ -205,7 +212,8 @@ const ChatTest: React.FC = () => {
   // Scroll to bottom of messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    
+  }, [messages, selectedConversation, user?.id]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -264,16 +272,6 @@ const ChatTest: React.FC = () => {
       setFile(null);
     } catch (error) {
       console.error("Error sending message:", error);
-    }
-  };
-
-  const handleMarkAsRead = async (messageId: number) => {
-    if (!socket) return;
-
-    try {
-      await socket.emit("markAsRead", { messageId });
-    } catch (error) {
-      console.error("Error marking message as read:", error);
     }
   };
 
@@ -377,10 +375,7 @@ const ChatTest: React.FC = () => {
             className={`conversation-item ${
               selectedConversation?.id === conv.id ? "selected" : ""
             }`}
-            onClick={() => {
-              setSelectedConversation(conv);
-              markAsRead(conv.id);
-            }}
+            onClick={() => handleConversationClick(conv)}
           >
             <div className="conversation-info">
               <span className="conversation-name">
@@ -409,40 +404,64 @@ const ChatTest: React.FC = () => {
             </h3>
           </div>
           <div className="messages-container">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`message ${
-                  message.senderId === user?.id ? "sent" : "received"
-                }`}
-                onMouseEnter={() =>
-                  !message.isRead && handleMarkAsRead(message.id)
-                }
-              >
-                <div className="message-content">
-                  {message.content}
-                  {/* Show file if present */}
-                  {message.fileUrl && (
-                    <img
-                      src={message.fileUrl}
-                      alt="sent file"
-                      style={{ maxWidth: 200, display: "block", marginTop: 8 }}
-                    />
-                  )}
-                </div>
-                <div className="message-meta">
-                  <span className="message-time">
-                    {new Date(message.createdAt).toLocaleTimeString()}
-                  </span>
-                  {message.senderId === user?.id && (
-                    <span className="read-status">
-                      {message.isRead ? "✓✓" : "✓"}
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-            <div ref={messagesEndRef} />
+            <div className="messages">
+              {messages.map((message) => {
+                const isSent = message.senderId === user?.id;
+                const otherUser = selectedConversation?.participants?.find(
+                  p => p.userId !== user?.id
+                )?.user;
+                const senderName = isSent ? user?.firstName : otherUser?.firstName;
+
+                return (
+                  <div
+                    key={message.id}
+                    className={`message ${isSent ? 'sent' : 'received'}`}
+                  >
+                    <div className="message-sender">
+                      {senderName}
+                    </div>
+                    <div className="message-bubble">
+                      <div className="message-content">
+                        {message.content}
+                        {message.fileUrl && (
+                          <div className="message-file">
+                            {message.filetype === 'image' ? (
+                              <img src={message.fileUrl} alt="Shared file" />
+                            ) : (
+                              <a href={message.fileUrl} target="_blank" rel="noopener noreferrer">
+                                View File
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="message-meta">
+                      <span className="message-time">
+                        {new Date(message.createdAt).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                      {isSent && (
+                        <span className="read-status">
+                          {message.isRead ? '✓✓' : '✓'}
+                          {message.readAt && (
+                            <span className="read-time">
+                              Read at {new Date(message.readAt).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
           </div>
           <div className="message-input">
             <input

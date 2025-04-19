@@ -81,6 +81,8 @@ export interface Message {
   conversationId: number;
   senderId: number;
   isRead: boolean;
+  readBy?: number;
+  readAt?: string;
   createdAt: string;
   fileUrl?: string;
   filetype?: string;
