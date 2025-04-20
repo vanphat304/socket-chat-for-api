@@ -9,6 +9,7 @@ import "./MatchingModal.css";
 import "./SubscriptionModal.css";
 import MatchDecisionModal from "./MatchDecisionModal";
 import { API_URL, API_URL_SOCKET, ChatSocketEvent } from "./config";
+import IcebreakerModal from "./IcebreakerModal";
 
 interface MatchedUser {
   id: number;
@@ -51,6 +52,7 @@ const ChatTest: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isIcebreakerModalOpen, setIsIcebreakerModalOpen] = useState(false);
 
   // Initialize socket connection
   useEffect(() => {
@@ -439,12 +441,20 @@ const ChatTest: React.FC = () => {
       {selectedConversation ? (
         <div className="chat-window">
           <div className="chat-header">
-            <h3>
-              Chat with{" "}
-              {selectedConversation.participants.find(
-                (p) => p.id !== user?.id
-              )?.firstName || "Unknown"}
-            </h3>
+            <div className="header-content">
+              <h3>
+                Chat with{" "}
+                {selectedConversation.participants.find(
+                  (p) => p.id !== user?.id
+                )?.firstName || "Unknown"}
+              </h3>
+              <button 
+                className="icebreaker-button"
+                onClick={() => setIsIcebreakerModalOpen(true)}
+              >
+                Icebreaker Questions
+              </button>
+            </div>
           </div>
           <div className="messages-container">
             <div className="messages">
@@ -564,6 +574,14 @@ const ChatTest: React.FC = () => {
         onClose={() => setIsMatchDecisionModalOpen(false)}
         onMatch={() => handleMatchDecision(true)}
         onPass={() => handleMatchDecision(false)}
+      />
+
+      <IcebreakerModal
+        isOpen={isIcebreakerModalOpen}
+        onClose={() => setIsIcebreakerModalOpen(false)}
+        socket={socket}
+        conversationId={selectedConversation?.id || 0}
+        userId={user?.id || 0}
       />
     </div>
   );

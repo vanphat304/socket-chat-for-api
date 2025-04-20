@@ -121,3 +121,26 @@ export interface ConversationResponse {
     lastPage: number;
   };
 }
+
+export interface QuestionDuration {
+  round1: number;
+  round2: number;
+  round3: number;
+}
+
+export interface IcebreakerQuestion {
+  id: number;
+  name: string;
+  description: string;
+  isNeedSubscription: boolean;
+  duration: QuestionDuration;
+}
+
+export interface QuestionsResponse {
+  success: boolean;
+  data: {
+    items: IcebreakerQuestion[];
+    durationChooseQuestion: number;
+  };
+  message: string;
+}

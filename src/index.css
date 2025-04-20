@@ -345,3 +345,25 @@
 .subscription-button:hover {
   background-color: #f57c00;
 }
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.icebreaker-button {
+  background-color: #9c27b0;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.icebreaker-button:hover {
+  background-color: #7b1fa2;
+}
