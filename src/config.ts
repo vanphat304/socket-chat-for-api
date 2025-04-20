@@ -1,7 +1,7 @@
-// export const API_URL_SOCKET = 'http://165.22.31.3:4000';
-// export const API_URL =  'http://165.22.31.3:4000/v1';
-export const API_URL_SOCKET = 'http://localhost:4000';
-export const API_URL =  'http://localhost:4000/v1';
+export const API_URL_SOCKET = 'http://165.22.31.3:4000';
+export const API_URL =  'http://165.22.31.3:4000/v1';
+// export const API_URL_SOCKET = 'http://localhost:4000';
+// export const API_URL =  'http://localhost:4000/v1';
 
 
 
