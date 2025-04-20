@@ -88,15 +88,36 @@ export interface Message {
   filetype?: string;
 }
 
+export interface ConversationParticipant {
+  id: number;
+  firstName: string;
+  lastName: string | null;
+  avatar: string;
+}
+
+export interface LastMessage {
+  id: number;
+  content: string;
+  senderId: number;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export interface Conversation {
   id: number;
-  lastMessageId?: number;
-  lastMessage?: Message;
-  participants?: Array<{
-    userId: number;
-    user: User;
-  }>;
+  chatStatus: 'MATCHED' | 'FIRST_CHAT' | 'UNMATCHED';
+  participants: ConversationParticipant[];
+  lastMessage: LastMessage | null;
   unreadCount: number;
-  createdAt: string;
   updatedAt: string;
+}
+
+export interface ConversationResponse {
+  data: Conversation[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    lastPage: number;
+  };
 }

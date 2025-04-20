@@ -81,7 +81,8 @@ const ChatTest: React.FC = () => {
     newSocket.on(ChatSocketEvent.NEW_MESSAGE, (message: Message) => {
       console.log("New message received:", message);
       if (selectedConversation?.id === message.conversationId) {
-        setMessages((prev) => [...prev, message]);
+        setMessages(prev => [...prev, message]);
+        scrollToBottom();
       }
     });
 
@@ -99,7 +100,12 @@ const ChatTest: React.FC = () => {
               }
             );
             const responseData = await response.json();
-            setMessages(responseData.messages || []);
+            // Sort messages in chronological order (oldest to newest)
+            const sortedMessages = (responseData.messages || []).sort(
+              (a: Message, b: Message) => 
+                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+            setMessages(sortedMessages);
           } catch (error) {
             console.error("Error fetching messages:", error);
           }
@@ -161,7 +167,13 @@ const ChatTest: React.FC = () => {
         });
         const data = await response.json();
         console.log("Conversations:", data);
-        setConversations(data.data);
+        // Sort conversations by last message time, newest at bottom
+        const sortedConversations = data.data.sort((a: Conversation, b: Conversation) => {
+          const timeA = new Date(a.lastMessage?.createdAt || a.updatedAt).getTime();
+          const timeB = new Date(b.lastMessage?.createdAt || b.updatedAt).getTime();
+          return timeA - timeB; // Oldest first, newest last
+        });
+        setConversations(sortedConversations);
       } catch (error) {
         console.error("Error fetching conversations:", error);
       }
@@ -172,7 +184,19 @@ const ChatTest: React.FC = () => {
     }
   }, [token]);
 
-  // Fetch messages when conversation is selected
+  // Update the scroll behavior
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  // Scroll when messages update
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Update message fetching
   useEffect(() => {
     const fetchMessages = async () => {
       if (!selectedConversation || !token) return;
@@ -188,14 +212,17 @@ const ChatTest: React.FC = () => {
         );
         const data = await response.json();
 
-        setMessages(data.messages || []);
+        // Sort messages in reverse chronological order (oldest to newest)
+        const sortedMessages = (data.messages || []).sort(
+          (a: Message, b: Message) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ).reverse(); // Reverse to show oldest at top, newest at bottom
+
+        setMessages(sortedMessages);
         setCurrentConversation(data);
 
-        // Check if this is a first chat
         if (data.chatStatus === "FIRST_CHAT") {
           setIsFirstChatModalOpen(true);
-
-          // Show match decision modal after 10 seconds
           setTimeout(() => {
             setIsFirstChatModalOpen(false);
             setIsMatchDecisionModalOpen(true);
@@ -208,12 +235,6 @@ const ChatTest: React.FC = () => {
 
     fetchMessages();
   }, [selectedConversation, token]);
-
-  // Scroll to bottom of messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    
-  }, [messages, selectedConversation, user?.id]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -251,16 +272,17 @@ const ChatTest: React.FC = () => {
       return;
     let fileUrl: string | null = null;
     let filetype: string | null = null;
+    
     if (file) {
       const uploadedFileUrl = await uploadFile(file);
-      if (!uploadedFileUrl) return; // Don't send if upload failed
+      if (!uploadedFileUrl) return;
       fileUrl = uploadedFileUrl;
-      // Determine filetype (simple check)
       if (file.type.startsWith("image/")) filetype = "image";
       else if (file.type.startsWith("video/")) filetype = "video";
       else if (file.type === "application/pdf") filetype = "pdf";
       else filetype = "file";
     }
+
     try {
       await socket.emit("sendMessage", {
         conversationId: selectedConversation.id,
@@ -268,8 +290,10 @@ const ChatTest: React.FC = () => {
         fileUrl,
         filetype,
       });
+      
       setNewMessage("");
       setFile(null);
+      scrollToBottom();
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -369,28 +393,47 @@ const ChatTest: React.FC = () => {
             </div>
           </div>
         </div>
-        {conversations.map((conv) => (
-          <div
-            key={conv.id}
-            className={`conversation-item ${
-              selectedConversation?.id === conv.id ? "selected" : ""
-            }`}
-            onClick={() => handleConversationClick(conv)}
-          >
-            <div className="conversation-info">
-              <span className="conversation-name">
-                {conv.participants?.find((p) => p.userId !== user?.id)?.user
-                  ?.firstName || "Unknown"}
-              </span>
-              {conv.unreadCount > 0 && (
-                <span className="unread-count">{conv.unreadCount}</span>
-              )}
+        {conversations.map((conv) => {
+          const otherParticipant = conv.participants.find(p => p.id !== user?.id);
+          return (
+            <div
+              key={conv.id}
+              className={`conversation-item ${
+                selectedConversation?.id === conv.id ? "selected" : ""
+              }`}
+              onClick={() => handleConversationClick(conv)}
+            >
+              <div className="conversation-info">
+                <div className="conversation-user">
+                  {otherParticipant?.avatar && (
+                    <img 
+                      src={otherParticipant.avatar} 
+                      alt={otherParticipant.firstName}
+                      className="user-avatar" 
+                    />
+                  )}
+                  <span className="conversation-name">
+                    {otherParticipant?.firstName || "Unknown"}
+                  </span>
+                </div>
+                {conv.unreadCount > 0 && (
+                  <span className="unread-count">{conv.unreadCount}</span>
+                )}
+              </div>
+              <div className="last-message">
+                <span className="message-content">
+                  {conv.lastMessage?.content || "No messages"}
+                </span>
+                <span className="message-time">
+                  {conv.lastMessage && new Date(conv.lastMessage.createdAt).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              </div>
             </div>
-            <div className="last-message">
-              {conv.lastMessage?.content || "No messages"}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {selectedConversation ? (
@@ -398,19 +441,19 @@ const ChatTest: React.FC = () => {
           <div className="chat-header">
             <h3>
               Chat with{" "}
-              {selectedConversation.participants?.find(
-                (p) => p.userId !== user?.id
-              )?.user.firstName || "Unknown"}
+              {selectedConversation.participants.find(
+                (p) => p.id !== user?.id
+              )?.firstName || "Unknown"}
             </h3>
           </div>
           <div className="messages-container">
             <div className="messages">
               {messages.map((message) => {
                 const isSent = message.senderId === user?.id;
-                const otherUser = selectedConversation?.participants?.find(
-                  p => p.userId !== user?.id
-                )?.user;
-                const senderName = isSent ? user?.firstName : otherUser?.firstName;
+                const otherParticipant = selectedConversation.participants.find(
+                  p => p.id !== user?.id
+                );
+                const senderName = isSent ? user?.firstName : otherParticipant?.firstName;
 
                 return (
                   <div
