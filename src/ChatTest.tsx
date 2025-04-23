@@ -102,7 +102,6 @@ const ChatTest: React.FC = () => {
               }
             );
             const responseData = await response.json();
-            // Sort messages in chronological order (oldest to newest)
             const sortedMessages = (responseData.messages || []).sort(
               (a: Message, b: Message) => 
                 new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -116,6 +115,38 @@ const ChatTest: React.FC = () => {
       }
     });
 
+    newSocket.on(ChatSocketEvent.PARTNER_OUT_IN_FIRST_CHAT, (data) => {
+      console.log("Partner out in first chat:", data);
+      
+      // Show message to user
+      alert(data.message || 'Your partner does not want to continue chat with you');
+      
+      // Close modals
+      setIsFirstChatModalOpen(false);
+      setIsMatchDecisionModalOpen(false);
+      
+      // Fetch updated conversations list
+      const fetchConversations = async () => {
+        try {
+          const response = await fetch(`${API_URL}/chat/conversations`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const responseData = await response.json();
+          const sortedConversations = responseData.data.sort((a: Conversation, b: Conversation) => {
+            const timeA = new Date(a.lastMessage?.createdAt || a.updatedAt).getTime();
+            const timeB = new Date(b.lastMessage?.createdAt || b.updatedAt).getTime();
+            return timeA - timeB;
+          });
+          setConversations(sortedConversations);
+        } catch (error) {
+          console.error("Error fetching conversations:", error);
+        }
+      };
+      
+      fetchConversations();
+    });
 
     newSocket.on(ChatSocketEvent.NEW_MESSAGE_NOTIFICATION, (notification) => {
       console.log("New notification:", notification);
@@ -298,6 +329,44 @@ const ChatTest: React.FC = () => {
       scrollToBottom();
     } catch (error) {
       console.error("Error sending message:", error);
+    }
+  };
+
+  const handleOutInFirstChat = async () => {
+    if (!currentConversation || !token) return;
+
+    try {
+      // First emit the socket event
+      socket?.emit(ChatSocketEvent.OUT_IN_FIRST_CHAT, {
+        conversationId: currentConversation.id
+      });
+
+      // Close modals immediately
+      setIsFirstChatModalOpen(false);
+      setIsMatchDecisionModalOpen(false);
+
+      // Wait for 1 second before fetching updated data
+      setTimeout(async () => {
+        try {
+          const response = await fetch(`${API_URL}/chat/conversations`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          const responseData = await response.json();
+          const sortedConversations = responseData.data.sort((a: Conversation, b: Conversation) => {
+            const timeA = new Date(a.lastMessage?.createdAt || a.updatedAt).getTime();
+            const timeB = new Date(b.lastMessage?.createdAt || b.updatedAt).getTime();
+            return timeA - timeB;
+          });
+          setConversations(sortedConversations);
+        } catch (error) {
+          console.error("Error fetching conversations:", error);
+        }
+      }, 1000);
+
+    } catch (error) {
+      console.error("Error sending out in first chat:", error);
     }
   };
 
@@ -574,6 +643,7 @@ const ChatTest: React.FC = () => {
         onClose={() => setIsMatchDecisionModalOpen(false)}
         onMatch={() => handleMatchDecision(true)}
         onPass={() => handleMatchDecision(false)}
+        onOutInFirstChat={handleOutInFirstChat}
       />
 
       <IcebreakerModal
